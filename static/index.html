@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantitative Momentum & Reversal Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827;
+            color: #d1d5db;
+        }
+        .card {
+            background-color: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+        }
+        input[type='range']::-webkit-slider-thumb { @apply slider-thumb; }
+        input[type='range']::-moz-range-thumb { @apply slider-thumb; }
+        .weight-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 4px;
+            background: #4b5563;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+            border-radius: 2px;
+        }
+         .weight-slider::-webkit-slider-thumb {
+            width: 16px;
+            height: 16px;
+            background: #60a5fa;
+        }
+        .gauge-bar {
+            transition: transform 0.5s ease-out;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-7xl">
+
+        <header class="text-center mb-6">
+            <h1 class="text-3xl sm:text-4xl font-bold text-white">Quantitative Momentum & Reversal Simulator</h1>
+            <p class="text-gray-400 mt-2">An advanced tool using calculus-based concepts and multiple weighted indicators.</p>
+        </header>
+
+        <div class="bg-yellow-900/50 border border-yellow-700 text-yellow-300 p-4 rounded-xl mb-8" role="alert">
+            <p class="font-bold">Disclaimer</p>
+            <p>This is a highly speculative, educational tool. It is not financial advice. No mathematical model can predict the market with certainty. Use at your own risk.</p>
+        </div>
+
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+            <div>
+                <label for="presetStrategy" class="mr-2 font-semibold text-gray-300">Preset Strategy:</label>
+                <select id="presetStrategy" class="bg-gray-800 border border-gray-600 rounded-lg p-2 text-gray-200">
+                    <option value="custom">Custom</option>
+                    <option value="momentum">Momentum</option>
+                    <option value="meanreversion">Mean Reversion</option>
+                    <option value="balanced">Balanced</option>
+                </select>
+            </div>
+            <button id="exportBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg shadow">Export Settings & Result</button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <!-- Left Column: Inputs -->
+            <div class="lg:col-span-3 space-y-6">
+                <!-- General Inputs -->
+                <div class="card">
+                    <h2 class="text-xl font-semibold mb-4 text-white border-b border-gray-700 pb-2">Core Market Data</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="currentPrice" class="block text-sm font-medium text-gray-400">Current Stock Price (₹)</label>
+                            <input type="number" id="currentPrice" value="1000" class="mt-1 block w-full bg-gray-900 border border-gray-600 rounded-lg p-2 text-white focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                             <label for="scalingFactor" class="block text-sm font-medium text-gray-400" title="Adjusts the overall sensitivity of the prediction.">Prediction Sensitivity</label>
+                            <input type="number" id="scalingFactor" value="4" step="0.5" class="mt-1 block w-full bg-gray-900 border border-gray-600 rounded-lg p-2 text-white focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Indicator Inputs -->
+                <div class="card space-y-6" id="indicator-controls">
+                    <!-- Template for a single indicator control will be cloned here by JS -->
+                </div>
+            </div>
+
+            <!-- Right Column: Results -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="card">
+                    <h2 class="text-xl font-semibold mb-4 text-white">Combined Signal</h2>
+                    <div class="relative w-full h-24">
+                        <div class="w-full h-8 bg-gradient-to-r from-red-500 via-gray-500 to-green-500 rounded-full absolute top-1/2 -translate-y-1/2"></div>
+                        <div id="gauge-needle" class="absolute top-1/2 h-10 w-1 bg-white rounded-full origin-bottom" style="left: 50%; transform: rotate(0deg);"></div>
+                    </div>
+                    <div id="finalSignalText" class="text-center text-2xl font-bold mt-4">NEUTRAL</div>
+                </div>
+
+                <div class="card">
+                    <h2 class="text-xl font-semibold mb-4 text-white">Prediction Output</h2>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-baseline p-3 bg-gray-900 rounded-lg">
+                            <span class="text-gray-400">Predicted Change:</span>
+                            <span id="predictedChange" class="text-xl font-semibold text-gray-300">₹0.00 (0.00%)</span>
+                        </div>
+                        <div class="flex justify-between items-baseline p-4 bg-black/30 rounded-lg">
+                            <span class="text-gray-300 text-lg">Predicted Price:</span>
+                            <span id="predictedPrice" class="text-3xl font-bold text-white">₹1000.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                     <h2 class="text-xl font-semibold mb-4 text-white">AI Analyst Commentary</h2>
+                     <p id="analystCommentary" class="text-gray-400 text-sm">Adjust inputs to generate an analysis.</p>
+                </div>
+
+                <div class="card">
+                    <h2 class="text-xl font-semibold mb-4 text-white">Indicator Contributions</h2>
+                    <ul id="indicatorContributions" class="space-y-2 text-sm"></ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    
+    <template id="indicator-template">
+        <div>
+            <div class="flex justify-between items-center">
+                <h3 class="indicator-name text-lg font-medium text-white">Indicator Name</h3>
+                <div class="text-right">
+                    <span class="indicator-signal-text text-sm font-bold">NEUTRAL</span>
+                </div>
+            </div>
+            <div class="mt-3 space-y-3 indicator-inputs">
+                <!-- Dynamic inputs go here -->
+            </div>
+             <div class="mt-4">
+                <label class="block text-xs font-medium text-gray-400 mb-1">Weight: <span class="indicator-weight-value font-bold">0.0</span></label>
+                <input type="range" class="weight-slider indicator-weight" min="0" max="1" step="0.05" value="0.5">
+            </div>
+        </div>
+    </template>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        const INDICATOR_CONFIG = {
+            rsi: {
+                name: 'RSI (Momentum)',
+                weight: 0.25,
+                inputs: [
+                    { id: 'rsiValue', label: 'RSI Value', type: 'range', min: 0, max: 100, step: 1, value: 50 },
+                ],
+                calculateSignal: (inputs) => {
+                    const rsi = inputs.rsiValue;
+                    if (rsi > 80) return -Math.min(1, (rsi - 80) / 10);
+                    if (rsi < 20) return Math.min(1, (20 - rsi) / 10);
+                    if (rsi > 50) return -(((rsi - 50) ** 2) / 30);
+                    if (rsi < 50) return (((50 - rsi) ** 2) / 30);
+                    return 0;
+                }
+            },
+            stochastic: {
+                name: 'Stochastic Oscillator (Reversal)',
+                weight: 0.15,
+                inputs: [
+                    { id: 'stochK', label: '%K Value', type: 'range', min: 0, max: 100, step: 1, value: 50 },
+                ],
+                calculateSignal: (inputs) => {
+                    const k = inputs.stochK;
+                    if (k > 80) return -Math.min(1, (k - 80) / 15);
+                    if (k < 20) return Math.min(1, (20 - k) / 15);
+                    return (k - 50) / 50;
+                }
+            },
+            macd: {
+                name: 'MACD (Trend)',
+                weight: 0.20,
+                inputs: [
+                    { id: 'macdLine', label: 'MACD Line', type: 'number', step: 0.05, value: 0.5 },
+                    { id: 'signalLine', label: 'Signal Line', type: 'number', step: 0.05, value: 0.3 },
+                ],
+                calculateSignal: (inputs) => {
+                    const hist = inputs.macdLine - inputs.signalLine;
+                    const scale = 2;
+                    return Math.max(-1, Math.min(1, hist / scale));
+                }
+            },
+            ma_slope: {
+                name: 'MA Slope (Calculus-based Trend)',
+                weight: 0.20,
+                inputs: [
+                    { id: 'maCurrent', label: 'Current MA Value', type: 'number', step: 1, value: 995 },
+                    { id: 'maPrevious', label: 'Previous MA Value', type: 'number', step: 1, value: 994 },
+                ],
+                calculateSignal: (inputs) => {
+                    const price = parseFloat(document.getElementById('currentPrice').value) || 1;
+                    const slope = inputs.maCurrent - inputs.maPrevious;
+                    const relativeSlope = slope / price; 
+                    const scale = 0.002;
+                    return Math.max(-1, Math.min(1, relativeSlope / scale));
+                }
+            },
+            bollinger: {
+                name: 'Bollinger Bands (Volatility Reversal)',
+                weight: 0.10,
+                inputs: [
+                    { id: 'bbLower', label: 'Lower Band', type: 'number', step: 1, value: 980 },
+                    { id: 'bbUpper', label: 'Upper Band', type: 'number', step: 1, value: 1020 },
+                ],
+                calculateSignal: (inputs) => {
+                    const price = parseFloat(document.getElementById('currentPrice').value);
+                    const { bbLower, bbUpper } = inputs;
+                    if (bbUpper <= bbLower) return 0;
+                    const mid = (bbUpper + bbLower) / 2;
+                    const range = (bbUpper - mid);
+                    if (range === 0) return 0;
+                    const position = (price - mid) / range;
+                    return -Math.max(-1, Math.min(1, position));
+                }
+            },
+             obv: {
+                name: 'On-Balance Volume (Volume Pressure)',
+                weight: 0.10,
+                inputs: [
+                    { id: 'obvChange', label: 'Recent OBV Change (%)', type: 'number', step: 0.1, value: 0.5 },
+                ],
+                calculateSignal: (inputs) => {
+                    const change = inputs.obvChange;
+                    const scale = 2;
+                    return Math.max(-1, Math.min(1, change / scale));
+                }
+            }
+        };
+
+        const PRESET_STRATEGIES = {
+            custom: {},
+            momentum: {
+                rsi: 0.35,
+                stochastic: 0.15,
+                macd: 0.25,
+                ma_slope: 0.2,
+                bollinger: 0.03,
+                obv: 0.02
+            },
+            meanreversion: {
+                rsi: 0.15,
+                stochastic: 0.25,
+                macd: 0.1,
+                ma_slope: 0.1,
+                bollinger: 0.3,
+                obv: 0.1
+            },
+            balanced: {
+                rsi: 0.2,
+                stochastic: 0.2,
+                macd: 0.2,
+                ma_slope: 0.2,
+                bollinger: 0.1,
+                obv: 0.2
+            }
+        };
+
+        const controlsContainer = document.getElementById('indicator-controls');
+        const template = document.getElementById('indicator-template');
+
+        // Dynamically create controls for each indicator
+        for (const key in INDICATOR_CONFIG) {
+            const config = INDICATOR_CONFIG[key];
+            const clone = template.content.cloneNode(true);
+
+            clone.querySelector('.indicator-name').textContent = config.name;
+            clone.querySelector('.indicator-weight').value = config.weight;
+            clone.querySelector('.indicator-weight-value').textContent = config.weight.toFixed(2);
+            clone.querySelector('.indicator-weight').dataset.indicator = key;
+            
+            const inputsContainer = clone.querySelector('.indicator-inputs');
+            
+            const row = document.createElement('div');
+            row.className = 'grid grid-cols-2 gap-x-4 gap-y-2';
+
+            config.inputs.forEach(inputConfig => {
+                const group = document.createElement('div');
+                const label = document.createElement('label');
+                label.htmlFor = inputConfig.id;
+                label.className = 'block text-sm font-medium text-gray-400';
+                label.textContent = inputConfig.label;
+                
+                const input = document.createElement('input');
+                input.type = inputConfig.type;
+                input.id = inputConfig.id;
+                input.min = inputConfig.min;
+                input.max = inputConfig.max;
+                input.step = inputConfig.step;
+                input.value = inputConfig.value;
+                input.dataset.indicator = key;
+                input.className = 'mt-1 block w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:ring-blue-500 focus:border-blue-500';
+
+                if(inputConfig.type === 'range') {
+                    const valueDisplay = document.createElement('span');
+                    valueDisplay.id = `${inputConfig.id}Value`;
+                    valueDisplay.textContent = ` (${inputConfig.value})`;
+                    valueDisplay.className = 'text-xs text-gray-400';
+                    label.appendChild(valueDisplay);
+                    input.className = 'w-full h-2 bg-gray-500 rounded-lg appearance-none cursor-pointer';
+                    input.classList.remove('p-2', 'mt-1');
+                }
+
+                group.appendChild(label);
+                group.appendChild(input);
+                row.appendChild(group);
+            });
+            inputsContainer.appendChild(row);
+            controlsContainer.appendChild(clone);
+        }
+        
+        // --- Main Update Function ---
+        function updatePrediction() {
+            let totalWeight = 0;
+            let combinedSignal = 0;
+            const signalContributions = [];
+
+            // 1. Calculate signal from each indicator
+            document.querySelectorAll('.indicator-weight').forEach(weightSlider => {
+                const key = weightSlider.dataset.indicator;
+                const config = INDICATOR_CONFIG[key];
+                const weight = parseFloat(weightSlider.value);
+                
+                totalWeight += weight;
+
+                const inputValues = {};
+                config.inputs.forEach(inputConfig => {
+                    inputValues[inputConfig.id] = parseFloat(document.getElementById(inputConfig.id).value);
+                });
+                
+                const signal = config.calculateSignal(inputValues);
+                combinedSignal += signal * weight;
+
+                signalContributions.push({name: config.name, signal, weight});
+
+                // Update individual UI elements
+                const container = weightSlider.closest('div.mt-4').parentElement;
+                const signalTextEl = container.querySelector('.indicator-signal-text');
+                signalTextEl.textContent = getSignalLabel(signal);
+                signalTextEl.style.color = getSignalColor(signal);
+            });
+            
+            // 2. Normalize combined signal by total weight
+            if (totalWeight > 0) {
+                combinedSignal /= totalWeight;
+            } else {
+                combinedSignal = 0;
+            }
+
+            // 3. Calculate Volatility & Price Change
+            const currentPrice = parseFloat(document.getElementById('currentPrice').value) || 0;
+            const scalingFactor = parseFloat(document.getElementById('scalingFactor').value) || 0;
+            const bbLower = parseFloat(document.getElementById('bbLower').value);
+            const bbUpper = parseFloat(document.getElementById('bbUpper').value);
+            
+            let volatility = 0;
+            if (currentPrice > 0 && bbUpper > bbLower) {
+                 volatility = (bbUpper - bbLower) / currentPrice;
+            }
+
+            const predictedChangePercentage = combinedSignal * volatility * scalingFactor * 100;
+            const predictedChangeValue = currentPrice * (predictedChangePercentage / 100);
+            const predictedPrice = currentPrice + predictedChangeValue;
+
+            // 4. Update UI
+            updateResultsUI(combinedSignal, predictedChangeValue, predictedChangePercentage, predictedPrice);
+            updateAnalystCommentary(signalContributions, combinedSignal);
+            updateIndicatorContributions(signalContributions);
+        }
+
+        // --- UI Update Helpers ---
+        function getSignalLabel(signal) {
+            if (signal > 0.7) return 'Strong Buy';
+            if (signal > 0.2) return 'Buy';
+            if (signal < -0.7) return 'Strong Sell';
+            if (signal < -0.2) return 'Sell';
+            return 'Neutral';
+        }
+        
+        function getSignalColor(signal) {
+             if (signal > 0.7) return '#10B981';
+            if (signal > 0.2) return '#34D399';
+            if (signal < -0.7) return '#EF4444';
+            if (signal < -0.2) return '#F87171';
+            return '#9CA3AF';
+        }
+
+        function updateResultsUI(signal, changeValue, changePercent, finalPrice) {
+            // Update Gauge
+            const needle = document.getElementById('gauge-needle');
+            const rotation = signal * 90;
+            needle.style.transform = `rotate(${rotation}deg)`;
+
+            document.getElementById('finalSignalText').textContent = getSignalLabel(signal).toUpperCase();
+            document.getElementById('finalSignalText').style.color = getSignalColor(signal);
+
+            // Update Prediction Text
+            const changeEl = document.getElementById('predictedChange');
+            changeEl.textContent = `₹${changeValue.toFixed(2)} (${changePercent.toFixed(2)}%)`;
+            if (changeValue >= 0) {
+                changeEl.style.color = '#34D399';
+            } else {
+                changeEl.style.color = '#F87171';
+            }
+            document.getElementById('predictedPrice').textContent = `₹${finalPrice.toFixed(2)}`;
+        }
+
+        function updateAnalystCommentary(contributions, finalSignal) {
+            const commentaryEl = document.getElementById('analystCommentary');
+            if(finalSignal === 0) {
+                commentaryEl.textContent = 'The model shows no clear directional bias. All indicators are either neutral or cancelling each other out.';
+                return;
+            }
+
+            const sorted = contributions.filter(c => c.weight > 0).sort((a,b) => Math.abs(b.signal * b.weight) - Math.abs(a.signal * a.weight));
+            
+            const primaryDriver = sorted[0];
+            const secondaryDriver = sorted.length > 1 ? sorted[1] : null;
+
+            const finalLabel = getSignalLabel(finalSignal).toLowerCase();
+            let text = `The overall signal is moderately ${finalLabel}. `;
+            if(Math.abs(finalSignal) > 0.7) text = `The overall signal is strongly ${finalLabel}. `;
+            
+            text += `This is primarily driven by a ${getSignalLabel(primaryDriver.signal).toLowerCase()} signal from the ${primaryDriver.name.split('(')[0].trim()}. `;
+            
+            if(secondaryDriver && Math.abs(secondaryDriver.signal) > 0.3) {
+                text += `This is supported by a notable ${getSignalLabel(secondaryDriver.signal).toLowerCase()} signal from the ${secondaryDriver.name.split('(')[0].trim()}.`
+            }
+            commentaryEl.textContent = text;
+        }
+
+        function updateIndicatorContributions(contributions) {
+            const ul = document.getElementById('indicatorContributions');
+            ul.innerHTML = '';
+            contributions.forEach(c => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="font-semibold" style="color:${getSignalColor(c.signal)}">${getSignalLabel(c.signal)}</span> <span class="text-gray-400">(${c.name})</span> <span class="ml-2 text-gray-500">Weight: ${c.weight.toFixed(2)}</span>`;
+                ul.appendChild(li);
+            });
+        }
+
+        // --- Preset Strategies ---
+        document.getElementById('presetStrategy').addEventListener('change', function() {
+            const preset = this.value;
+            if (preset === 'custom') return;
+            const weights = PRESET_STRATEGIES[preset];
+            document.querySelectorAll('.indicator-weight').forEach(slider => {
+                const key = slider.dataset.indicator;
+                if (weights[key] !== undefined) {
+                    slider.value = weights[key];
+                    slider.previousElementSibling.querySelector('.indicator-weight-value').textContent = weights[key].toFixed(2);
+                }
+            });
+            updatePrediction();
+        });
+
+        // --- Export/Save Feature ---
+        document.getElementById('exportBtn').addEventListener('click', function() {
+            const settings = {};
+            document.querySelectorAll('.indicator-weight').forEach(slider => {
+                const key = slider.dataset.indicator;
+                settings[key] = {
+                    weight: parseFloat(slider.value),
+                    inputs: {}
+                };
+                const config = INDICATOR_CONFIG[key];
+                config.inputs.forEach(inputConfig => {
+                    settings[key].inputs[inputConfig.id] = parseFloat(document.getElementById(inputConfig.id).value);
+                });
+            });
+            settings.currentPrice = parseFloat(document.getElementById('currentPrice').value);
+            settings.scalingFactor = parseFloat(document.getElementById('scalingFactor').value);
+            settings.preset = document.getElementById('presetStrategy').value;
+            settings.timestamp = new Date().toISOString();
+            settings.predictedChange = document.getElementById('predictedChange').textContent;
+            settings.predictedPrice = document.getElementById('predictedPrice').textContent;
+            settings.analystCommentary = document.getElementById('analystCommentary').textContent;
+
+            const blob = new Blob([JSON.stringify(settings, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `stock_prediction_${settings.timestamp.replace(/[:.]/g,'_')}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // --- Event Listeners ---
+        document.body.addEventListener('input', (e) => {
+            if (e.target.matches('input')) {
+                if(e.target.type === 'range' && !e.target.classList.contains('weight-slider')) {
+                    const display = document.getElementById(`${e.target.id}Value`);
+                    if(display) display.textContent = ` (${e.target.value})`;
+                }
+                if(e.target.classList.contains('weight-slider')) {
+                     const display = e.target.previousElementSibling.querySelector('.indicator-weight-value');
+                     if(display) display.textContent = parseFloat(e.target.value).toFixed(2);
+                }
+                updatePrediction();
+            }
+        });
+        
+        // Initial Calculation
+        updatePrediction();
+    });
+    </script>
+</body>
+</html> 
