@@ -20,7 +20,7 @@ A modern, interactive, and educational dashboard for simulating stock price pred
 
 ## 🖥️ Demo
 
-![Dashboard Screenshot](screenshot.png) <!-- Add a screenshot if you want -->
+![Dashboard Screenshot](image.png) <!-- Add a screenshot if you want -->
 
 ---
 
