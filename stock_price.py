@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory
 import os
 
-app = Flask(__name__, static_folder='static')
+app = Flask(__name__, static_folder='docs')
 
 # Function to calculate RSI contribution (f(RSI))
 def calculate_rsi_contribution(rsi):
