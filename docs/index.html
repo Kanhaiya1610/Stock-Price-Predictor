@@ -5,19 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quantitative Momentum & Reversal Simulator</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat+Alternates:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #111827;
-            color: #d1d5db;
+            font-family: "Libre Baskerville", serif;
+            background-color: #111827; /* Dark blue-gray */
+            color: #d1d5db; /* Light gray */
         }
         .card {
-            background-color: #1f2937;
-            border: 1px solid #374151;
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            background-color: #1f2937; /* Lighter blue-gray */
+            border: 1px solid #374151; /* Softer border */
+            border-radius: 0.75rem; /* Slightly less rounded */
+            padding: 1.25rem; /* A bit less padding */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         }
         .slider-thumb {
             -webkit-appearance: none;
@@ -29,6 +32,11 @@
             border-radius: 50%;
             border: 2px solid white;
             box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+        }
+        /* Improve input field appearance */
+        input[type='number'], textarea {
+            background-color: #374151; /* Darker input fields */
+            border: 1px solid #4b5563;
         }
         input[type='range']::-webkit-slider-thumb { @apply slider-thumb; }
         input[type='range']::-moz-range-thumb { @apply slider-thumb; }
@@ -80,7 +88,7 @@
             <button id="exportBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg shadow">Export Settings & Result</button>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:items-stretch">
             <div class="lg:col-span-3 space-y-6">
         
                 <div class="card">
@@ -125,7 +133,7 @@
             </div>
 
             <!-- Right Column: Results -->
-            <div class="lg:col-span-2 space-y-6">
+            <div class="lg:col-span-2 space-y-6 flex flex-col">
                 <div class="card">
                     <h2 class="text-xl font-semibold mb-4 text-white">Combined Signal</h2>
                     <div class="relative w-full h-24">
@@ -149,9 +157,9 @@
                     </div>
                 </div>
 
-                <div class="card">
-                     <h2 class="text-xl font-semibold mb-4 text-white">AI Analyst Commentary</h2>
-                     <p id="analystCommentary" class="text-gray-400 text-sm">Adjust inputs to generate an analysis.</p>
+                <div class="card flex-grow flex flex-col">
+                    <h2 class="text-xl font-semibold mb-4 text-white">AI Analyst Commentary</h2>
+                    <p id="analystCommentary" class="text-gray-400 text-sm flex-grow">Adjust inputs to generate an analysis.</p>
                 </div>
 
                 <div class="card">
