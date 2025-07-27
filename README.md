@@ -33,8 +33,7 @@ A modern, interactive, and educational dashboard for simulating stock market str
 
 # 🖥️ Live Demo & Screenshot
 
-![Dashboard Screenshot](image.png)<!-- Add a screenshot if you want -->
-![➡️ Click here for the Live Demo](https://kanhaiya1610.github.io/Stock-Price-Predictor/)
+[![Dashboard Screenshot](image.png)](https://kanhaiya1610.github.io/Stock-Price-Predictor/)
 ---
 
 ## 🛠️ Setup Guide
