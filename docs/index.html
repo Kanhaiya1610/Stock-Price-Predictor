@@ -81,9 +81,8 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
-            <!-- Left Column: Inputs -->
             <div class="lg:col-span-3 space-y-6">
-                <!-- General Inputs -->
+        
                 <div class="card">
                     <h2 class="text-xl font-semibold mb-4 text-white border-b border-gray-700 pb-2">Core Market Data</h2>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -92,16 +91,37 @@
                             <input type="number" id="currentPrice" value="1000" class="mt-1 block w-full bg-gray-900 border border-gray-600 rounded-lg p-2 text-white focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         <div>
-                             <label for="scalingFactor" class="block text-sm font-medium text-gray-400" title="Adjusts the overall sensitivity of the prediction.">Prediction Sensitivity</label>
+                            <label for="scalingFactor" class="block text-sm font-medium text-gray-400" title="Adjusts the overall sensitivity of the prediction.">Prediction Sensitivity</label>
                             <input type="number" id="scalingFactor" value="4" step="0.5" class="mt-1 block w-full bg-gray-900 border border-gray-600 rounded-lg p-2 text-white focus:ring-blue-500 focus:border-blue-500">
                         </div>
                     </div>
                 </div>
-
-                <!-- Indicator Inputs -->
-                <div class="card space-y-6" id="indicator-controls">
-                    <!-- Template for a single indicator control will be cloned here by JS -->
+        
+                <div class="card">
+                    <h2 class="text-xl font-semibold mb-4 text-white">🧠 Smart Analyst</h2>
+                    <p class="text-gray-400 mb-2 text-sm">Paste a financial news article or analysis below. The AI will interpret it, provide advice, and suggest a strategy by setting the indicator weights for you.</p>
+                    <textarea id="articleInput" class="w-full h-32 bg-gray-900 border border-gray-600 rounded-lg p-2 text-white focus:ring-blue-500 focus:border-blue-500" placeholder="Paste news article text here..."></textarea>
+                
+                    <div class="mt-3">
+                        <label for="imageUpload" class="block text-sm font-medium text-gray-400">Optional: Upload an image (chart, etc.)</label>
+                        <input type="file" id="imageUpload" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" multiple>
+                    </div>
+                
+                    <div id="imagePreviewContainer" class="mt-2" style="display: none;">
+                        <img id="imagePreview" src="#" alt="Uploaded Image" style="width: 40px; height: 40px; border: 1px solid gray;">
+                        <p id="imageUploadNotification" class="text-gray-400 text-xs italic">Image uploaded</p>
+                    </div>
+                
+                    <button id="analyzeBtn" class="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg shadow">
+                        Analyze & Set Strategy
+                    </button>
+                    <div id="aiAdvice" class="mt-4 p-3 bg-gray-900/50 rounded-lg text-gray-300 text-sm" style="display: none;">
+                    </div>
                 </div>
+                <div class="card space-y-6" id="indicator-controls">
+                    </div>
+        
+            </div>
             </div>
 
             <!-- Right Column: Results -->
@@ -162,7 +182,117 @@
     </template>
 
     <script>
+    // In your index.html script tag
+
     document.addEventListener('DOMContentLoaded', () => {
+
+    // --- VARIABLE DECLARATIONS (All in one place) ---
+        const chatIcon = document.getElementById('chat-icon');
+        const chatWindow = document.getElementById('chat-window');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chatInput');
+        const imageUpload = document.getElementById('imageUpload');
+        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+        // NOTE: We no longer need single imagePreview and imageUploadNotification variables
+        
+        // --- CHATBOT EVENT LISTENERS ---
+        chatIcon.addEventListener('click', () => {
+            chatWindow.classList.toggle('hidden');
+        });
+    
+        chatInput.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter' && chatInput.value.trim() !== '') {
+                const userQuery = chatInput.value;
+                appendMessage('user', userQuery);
+                chatInput.value = ''; // Clear input
+
+                try {
+                    const response = await fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: userQuery })
+                    });
+                    const data = await response.json();
+                    appendMessage('bot', data.reply);
+                } catch (error) {
+                    appendMessage('bot', 'Sorry, I encountered an error. Please try again.');
+                }
+            }
+        });
+        
+        const imagePreview = document.getElementById('imagePreview');
+        const imageUploadNotification = document.getElementById('imageUploadNotification');
+
+        // --- IMAGE UPLOAD EVENT LISTENER (Single correct version for multiple images) ---
+        imageUpload.addEventListener('change', () => {
+            imagePreviewContainer.innerHTML = ''; // Clear previous previews
+            imagePreviewContainer.style.display = 'none';
+
+            const files = imageUpload.files;
+            if (files && files.length > 0) {
+                imagePreviewContainer.style.display = 'flex';
+                imagePreviewContainer.style.flexWrap = 'wrap';
+                imagePreviewContainer.style.gap = '8px';
+
+                for (const file of files) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = document.createElement('img');
+                        img.src = e.target?.result;
+                        img.alt = 'Uploaded Image';
+                        img.style.width = '40px';
+                        img.style.height = '40px';
+                        img.style.objectFit = 'cover';
+                        img.style.border = '1px solid gray';
+                        img.style.borderRadius = '4px';
+                        imagePreviewContainer.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+
+        // New handler for multiple images
+imageUpload.addEventListener('change', () => {
+    imagePreviewContainer.innerHTML = ''; // Clear previous previews
+    imagePreviewContainer.style.display = 'none';
+
+    const files = imageUpload.files;
+    if (files && files.length > 0) {
+        imagePreviewContainer.style.display = 'flex'; // Use flexbox for thumbnails
+        imagePreviewContainer.style.flexWrap = 'wrap';
+        imagePreviewContainer.style.gap = '8px';
+
+        for (const file of files) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = document.createElement('img');
+                img.src = e.target?.result;
+                img.alt = 'Uploaded Image';
+                img.style.width = '40px';
+                img.style.height = '40px';
+                img.style.objectFit = 'cover';
+                img.style.border = '1px solid gray';
+                img.style.borderRadius = '4px';
+                imagePreviewContainer.appendChild(img);
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+});
+    
+    function appendMessage(sender, text) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('mb-3', 'p-3', 'rounded-lg');
+        if (sender === 'user') {
+            messageDiv.classList.add('bg-blue-600', 'text-white', 'ml-auto', 'max-w-[80%]');
+        } else {
+            messageDiv.classList.add('bg-gray-700', 'text-gray-200', 'mr-auto', 'max-w-[80%]');
+        }
+        messageDiv.innerText = text;
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll
+    }
 
         const INDICATOR_CONFIG = {
             rsi: {
@@ -334,63 +464,64 @@
             controlsContainer.appendChild(clone);
         }
         
-        // --- Main Update Function ---
-        function updatePrediction() {
+        // --- REVISED Main Update Function ---
+        async function updatePrediction() {
+            const commentaryEl = document.getElementById('analystCommentary');
+            commentaryEl.textContent = '🤖 Generating AI analysis...'; // Loading state
+        
+            // 1. Collect all data for the backend
+            const payload = {
+                core: {
+                    currentPrice: parseFloat(document.getElementById('currentPrice').value),
+                    scalingFactor: parseFloat(document.getElementById('scalingFactor').value)
+                },
+                indicators: {}
+            };
+        
             let totalWeight = 0;
-            let combinedSignal = 0;
-            const signalContributions = [];
-
-            // 1. Calculate signal from each indicator
             document.querySelectorAll('.indicator-weight').forEach(weightSlider => {
                 const key = weightSlider.dataset.indicator;
                 const config = INDICATOR_CONFIG[key];
                 const weight = parseFloat(weightSlider.value);
-                
                 totalWeight += weight;
-
-                const inputValues = {};
+            
+                payload.indicators[key] = {
+                    weight: weight,
+                    inputs: {}
+                };
+            
                 config.inputs.forEach(inputConfig => {
-                    inputValues[inputConfig.id] = parseFloat(document.getElementById(inputConfig.id).value);
+                    payload.indicators[key].inputs[inputConfig.id] = parseFloat(document.getElementById(inputConfig.id).value);
                 });
-                
-                const signal = config.calculateSignal(inputValues);
-                combinedSignal += signal * weight;
-
-                signalContributions.push({name: config.name, signal, weight});
-
-                // Update individual UI elements
-                const container = weightSlider.closest('div.mt-4').parentElement;
-                const signalTextEl = container.querySelector('.indicator-signal-text');
-                signalTextEl.textContent = getSignalLabel(signal);
-                signalTextEl.style.color = getSignalColor(signal);
             });
+            payload.core.totalWeight = totalWeight;
+        
+        
+            // 2. Call the Flask backend API
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
             
-            // 2. Normalize combined signal by total weight
-            if (totalWeight > 0) {
-                combinedSignal /= totalWeight;
-            } else {
-                combinedSignal = 0;
-            }
-
-            // 3. Calculate Volatility & Price Change
-            const currentPrice = parseFloat(document.getElementById('currentPrice').value) || 0;
-            const scalingFactor = parseFloat(document.getElementById('scalingFactor').value) || 0;
-            const bbLower = parseFloat(document.getElementById('bbLower').value);
-            const bbUpper = parseFloat(document.getElementById('bbUpper').value);
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.statusText}`);
+                }
             
-            let volatility = 0;
-            if (currentPrice > 0 && bbUpper > bbLower) {
-                 volatility = (bbUpper - bbLower) / currentPrice;
+                const data = await response.json();
+            
+                // 3. Update UI with data from the server
+                updateResultsUI(data.combined_signal, data.predicted_change_value, data.predicted_change_percentage, data.predicted_price);
+                updateIndicatorContributions(data.contributions);
+            
+                // This now comes directly from Gemini via your backend!
+                commentaryEl.textContent = data.explanation;
+            
+            } catch (error) {
+                console.error("Prediction failed:", error);
+                commentaryEl.textContent = `Error: Could not fetch prediction. ${error.message}`;
             }
-
-            const predictedChangePercentage = combinedSignal * volatility * scalingFactor * 100;
-            const predictedChangeValue = currentPrice * (predictedChangePercentage / 100);
-            const predictedPrice = currentPrice + predictedChangeValue;
-
-            // 4. Update UI
-            updateResultsUI(combinedSignal, predictedChangeValue, predictedChangePercentage, predictedPrice);
-            updateAnalystCommentary(signalContributions, combinedSignal);
-            updateIndicatorContributions(signalContributions);
         }
 
         // --- UI Update Helpers ---
@@ -430,29 +561,29 @@
             document.getElementById('predictedPrice').textContent = `₹${finalPrice.toFixed(2)}`;
         }
 
-        function updateAnalystCommentary(contributions, finalSignal) {
-            const commentaryEl = document.getElementById('analystCommentary');
-            if(finalSignal === 0) {
-                commentaryEl.textContent = 'The model shows no clear directional bias. All indicators are either neutral or cancelling each other out.';
-                return;
-            }
+        // function updateAnalystCommentary(contributions, finalSignal) {
+        //     const commentaryEl = document.getElementById('analystCommentary');
+        //     if(finalSignal === 0) {
+        //         commentaryEl.textContent = 'The model shows no clear directional bias. All indicators are either neutral or cancelling each other out.';
+        //         return;
+        //     }
 
-            const sorted = contributions.filter(c => c.weight > 0).sort((a,b) => Math.abs(b.signal * b.weight) - Math.abs(a.signal * a.weight));
+        //     const sorted = contributions.filter(c => c.weight > 0).sort((a,b) => Math.abs(b.signal * b.weight) - Math.abs(a.signal * a.weight));
             
-            const primaryDriver = sorted[0];
-            const secondaryDriver = sorted.length > 1 ? sorted[1] : null;
+        //     const primaryDriver = sorted[0];
+        //     const secondaryDriver = sorted.length > 1 ? sorted[1] : null;
 
-            const finalLabel = getSignalLabel(finalSignal).toLowerCase();
-            let text = `The overall signal is moderately ${finalLabel}. `;
-            if(Math.abs(finalSignal) > 0.7) text = `The overall signal is strongly ${finalLabel}. `;
+        //     const finalLabel = getSignalLabel(finalSignal).toLowerCase();
+        //     let text = `The overall signal is moderately ${finalLabel}. `;
+        //     if(Math.abs(finalSignal) > 0.7) text = `The overall signal is strongly ${finalLabel}. `;
             
-            text += `This is primarily driven by a ${getSignalLabel(primaryDriver.signal).toLowerCase()} signal from the ${primaryDriver.name.split('(')[0].trim()}. `;
+        //     text += `This is primarily driven by a ${getSignalLabel(primaryDriver.signal).toLowerCase()} signal from the ${primaryDriver.name.split('(')[0].trim()}. `;
             
-            if(secondaryDriver && Math.abs(secondaryDriver.signal) > 0.3) {
-                text += `This is supported by a notable ${getSignalLabel(secondaryDriver.signal).toLowerCase()} signal from the ${secondaryDriver.name.split('(')[0].trim()}.`
-            }
-            commentaryEl.textContent = text;
-        }
+        //     if(secondaryDriver && Math.abs(secondaryDriver.signal) > 0.3) {
+        //         text += `This is supported by a notable ${getSignalLabel(secondaryDriver.signal).toLowerCase()} signal from the ${secondaryDriver.name.split('(')[0].trim()}.`
+        //     }
+        //     commentaryEl.textContent = text;
+        // }
 
         function updateIndicatorContributions(contributions) {
             const ul = document.getElementById('indicatorContributions');
@@ -478,6 +609,8 @@
             });
             updatePrediction();
         });
+        // --- Event Listeners ---
+        // Use a debounce function to avoid spamming the API on every tiny slider move
 
         // --- Export/Save Feature ---
         document.getElementById('exportBtn').addEventListener('click', function() {
@@ -512,24 +645,109 @@
             URL.revokeObjectURL(url);
         });
 
-        // --- Event Listeners ---
+        let debounceTimer;
         document.body.addEventListener('input', (e) => {
             if (e.target.matches('input')) {
+                // Update range slider text displays instantly
                 if(e.target.type === 'range' && !e.target.classList.contains('weight-slider')) {
                     const display = document.getElementById(`${e.target.id}Value`);
                     if(display) display.textContent = ` (${e.target.value})`;
                 }
                 if(e.target.classList.contains('weight-slider')) {
-                     const display = e.target.previousElementSibling.querySelector('.indicator-weight-value');
-                     if(display) display.textContent = parseFloat(e.target.value).toFixed(2);
+                    const display = e.target.previousElementSibling.querySelector('.indicator-weight-value');
+                    if(display) display.textContent = parseFloat(e.target.value).toFixed(2);
                 }
-                updatePrediction();
+            
+                // Debounce the API call
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    updatePrediction();
+                }, 500); // Wait 500ms after the user stops changing inputs
             }
+        });
+
+       
+         // --- "ANALYZE & SET STRATEGY" BUTTON EVENT LISTENER ---
+         document.getElementById('analyzeBtn').addEventListener('click', async () => {
+            const articleText = document.getElementById('articleInput').value;
+            const imageFiles = document.getElementById('imageUpload').files;
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const adviceDiv = document.getElementById('aiAdvice');
+
+            if (!articleText.trim() && imageFiles.length === 0) {
+                alert('Please paste some text or upload image(s) to analyze.');
+                return;
+            }
+
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = 'Analyzing...';
+            adviceDiv.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('text', articleText);
+
+            for (const file of imageFiles) {
+                formData.append('images', file);
+            }
+
+            try {
+                const response = await fetch('/analyze-text', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Failed to get analysis from server.');
+
+                const data = await response.json();
+
+                adviceDiv.textContent = `AI Advice: ${data.advice}`;
+                adviceDiv.style.display = 'block';
+
+                for (const key in data.weights) {
+                    const slider = document.querySelector(`.indicator-weight[data-indicator="${key}"]`);
+                    if (slider) {
+                        slider.value = data.weights[key];
+                        slider.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                }
+            } catch (error) {
+                adviceDiv.textContent = `Error: ${error.message}`;
+                adviceDiv.style.display = 'block';
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = 'Analyze & Set Strategy';
+            }
+        });
+
+        // Update presets instantly
+        document.getElementById('presetStrategy').addEventListener('change', function() {
+            const preset = this.value;
+            if (preset === 'custom') return;
+            const weights = PRESET_STRATEGIES[preset];
+            document.querySelectorAll('.indicator-weight').forEach(slider => {
+                const key = slider.dataset.indicator;
+                if (weights[key] !== undefined) {
+                    slider.value = weights[key];
+                    slider.previousElementSibling.querySelector('.indicator-weight-value').textContent = weights[key].toFixed(2);
+                }
+            });
+            updatePrediction(); // Trigger prediction after applying preset
         });
         
         // Initial Calculation
         updatePrediction();
     });
     </script>
+    <div id="chat-icon" class="fixed bottom-5 right-5 bg-blue-600 p-3 rounded-full cursor-pointer shadow-lg hover:bg-blue-700">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+    </div>
+
+    <div id="chat-window" class="hidden fixed bottom-20 right-5 w-96 h-[500px] bg-gray-800 rounded-xl shadow-2xl flex flex-col">
+        <div class="p-4 bg-gray-900 rounded-t-xl text-white font-semibold">FinBot Assistant</div>
+        <div id="chat-messages" class="flex-1 p-4 overflow-y-auto"></div>
+        <div class="p-4 border-t border-gray-700">
+            <input type="text" id="chatInput" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-2 text-white" placeholder="Ask a question...">
+        </div>
+    </div>
 </body>
 </html> 
